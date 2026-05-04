@@ -1,26 +1,103 @@
-<body></body>
+<body>
+  <div id="hud" style="position:absolute;top:10px;left:10px;z-index:999;font-family:monospace;font-size:18px;display:flex;gap:20px;align-items:center;">
+    <span id="scoreEl">Score: 0</span>
+    <span id="timeEl">Time: 30</span>
+    <button id="startBtn" onclick="startGame()">Start game</button>
+  </div>
+</body>
+
 <script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
 <script>
   /*global nn*/
 
-  function draw () {
-    if (nn.mouseDown) {
-      //let x = nn.random(nn.width)
-      // let y = nn.random(nn.height)
-      let x = nn.mouseX
-      let y = nn.mouseY
-      let hue = nn.random(360)
-      nn.create('div')
-        .content('💩')
-        .hueRotate(hue)
-        .position(x, y)
-        .scale(3)
-        .rotate(hue)
-        .addTo('body')
+  let score = 0
+  let timeLeft = 30
+  let running = false
+  let activeFred = null
+  let moleTimer = null
+  let moleHideTimer = null
+  let countdown = null
+
+  const scoreEl = document.getElementById('scoreEl')
+  const timeEl = document.getElementById('timeEl')
+  const startBtn = document.getElementById('startBtn')
+
+  function removeFred () {
+    clearTimeout(moleHideTimer)
+    clearTimeout(moleTimer)
+    if (activeFred && activeFred.parentNode) {
+      activeFred.parentNode.removeChild(activeFred)
     }
-
+    activeFred = null
   }
-  // nn.times(100,draw)
 
-nn.on('mousemove',draw)  
+  function spawnFred () {
+    if (!running) return
+
+    let x = Math.random() * (window.innerWidth - 120)
+    let y = Math.random() * (window.innerHeight - 120) + 60
+    let hue = nn.random(360)
+
+    const fredEl = nn.create('img')
+      .set('src', 'fred-fred-mopping.gif')
+      .css('user-select', 'none')
+      .hueRotate(hue)
+      .position(x, y)
+      .scale(0.5)
+      .rotate(hue)
+      .addTo('body')
+
+    activeFred = fredEl.node
+    activeFred.style.zIndex = 10
+    activeFred.style.cursor = 'pointer'
+
+    activeFred.addEventListener('click', function (e) {
+      e.stopPropagation()
+      if (!running) return
+      const fredToRemove = activeFred
+      activeFred = null
+      clearTimeout(moleHideTimer)
+      clearTimeout(moleTimer)
+      if (fredToRemove && fredToRemove.parentNode) {
+        fredToRemove.parentNode.removeChild(fredToRemove)
+      }
+      score++
+      scoreEl.innerHTML = 'Score: ' + score
+      moleTimer = setTimeout(spawnFred, 600)
+    })
+
+    moleHideTimer = setTimeout(function () {
+      removeFred()
+      if (running) moleTimer = setTimeout(spawnFred, 400)
+    }, 800 + nn.random(800))
+  }
+
+  function startGame () {
+    running = false
+    clearInterval(countdown)
+    clearTimeout(moleTimer)
+    clearTimeout(moleHideTimer)
+    removeFred()
+
+    score = 0
+    timeLeft = 30
+    running = true
+    scoreEl.innerHTML = 'Score: 0'
+    timeEl.innerHTML = 'Time: 30'
+    startBtn.innerHTML = 'Restart'
+
+    spawnFred()
+
+    countdown = setInterval(function () {
+      timeLeft--
+      timeEl.innerHTML = 'Time: ' + timeLeft
+      if (timeLeft <= 0) {
+        clearInterval(countdown)
+        running = false
+        removeFred()
+        scoreEl.innerHTML = 'Done! Score: ' + score
+        startBtn.innerHTML = 'Play again'
+      }
+    }, 1000)
+  }
 </script>
